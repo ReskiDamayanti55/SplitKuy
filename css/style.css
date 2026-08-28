@@ -140,6 +140,19 @@ select:focus {
   outline-offset: 1px;
 }
 
+/* Hilangkan tombol spinner bawaan browser di input angka supaya angka panjang
+   (harga) tidak kepotong oleh lebar tombol +/- tersebut. */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 .field-row {
   display: flex;
   flex-direction: column;
@@ -335,11 +348,34 @@ select:focus {
   gap: 10px;
 }
 
+.item-row-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.item-row-top .item-name {
+  flex: 1;
+  min-width: 0;
+}
+
 .item-row-fields {
   display: grid;
-  grid-template-columns: 2fr 1fr 0.7fr auto;
-  gap: 8px;
-  align-items: center;
+  grid-template-columns: 1fr 88px;
+  gap: 10px;
+}
+
+.item-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.item-field-label input {
+  width: 100%;
 }
 
 .item-assign {
@@ -559,8 +595,54 @@ select:focus {
   color: var(--color-danger);
 }
 
-@media (min-width: 480px) {
-  .item-row-fields {
-    grid-template-columns: 2fr 1fr 0.6fr auto;
-  }
+/* Install App banner */
+
+.install-banner {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 100;
+  max-width: 608px;
+  margin: 0 auto;
+  background: var(--color-primary-dark);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 12px 12px 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  font-size: 0.85rem;
+  line-height: 1.35;
 }
+
+.install-banner-text {
+  flex: 1;
+}
+
+.install-banner-btn {
+  background: #fff;
+  color: var(--color-primary-dark);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+
+.install-banner-close {
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 4px;
+  opacity: 0.85;
+}
+

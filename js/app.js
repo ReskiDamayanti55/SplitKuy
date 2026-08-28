@@ -838,11 +838,19 @@ async function renderReceiptForm(app, { sessionId, receiptId }) {
       .map(
         (item, idx) => `
       <div class="item-row" data-index="${idx}">
-        <div class="item-row-fields">
+        <div class="item-row-top">
           <input type="text" class="item-name" data-index="${idx}" placeholder="Nama item" value="${escapeHtml(item.name)}" />
-          <input type="number" class="item-price" data-index="${idx}" placeholder="Harga" min="0" step="any" value="${item.price || ''}" />
-          <input type="number" class="item-qty" data-index="${idx}" placeholder="Qty" min="1" step="1" value="${item.qty || 1}" />
           <button type="button" class="btn-icon danger" data-action="remove-item" data-index="${idx}" title="Hapus item" aria-label="Hapus item">🗑</button>
+        </div>
+        <div class="item-row-fields">
+          <label class="item-field-label">
+            <span>Harga</span>
+            <input type="number" class="item-price" data-index="${idx}" placeholder="0" min="0" step="any" value="${item.price || ''}" />
+          </label>
+          <label class="item-field-label">
+            <span>Qty</span>
+            <input type="number" class="item-qty" data-index="${idx}" placeholder="1" min="1" step="1" value="${item.qty || 1}" />
+          </label>
         </div>
         <div class="item-assign">
           <span class="item-assign-label">Dipesan oleh:</span>
@@ -1326,5 +1334,89 @@ if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
     });
   });
 }
+
+// ---------- Install App banner ----------
+// Browser tidak selalu menampilkan prompt install secara otomatis (Chrome punya
+// heuristik engagement sendiri, dan iOS Safari tidak pernah menyediakan prompt
+// otomatis sama sekali) — jadi kita sediakan tombol/instruksi install sendiri.
+(function setupInstallBanner() {
+  const DISMISS_KEY = 'splitkuy-install-dismissed';
+  const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+
+  function isStandalone() {
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true
+    );
+  }
+
+  if (isStandalone()) return; // sudah ter-install, tidak perlu tawarkan lagi
+  let dismissed = false;
+  try {
+    dismissed = localStorage.getItem(DISMISS_KEY) === '1';
+  } catch (e) {
+    // localStorage bisa gagal (mode private dsb) — anggap belum di-dismiss
+  }
+  if (dismissed) return;
+
+  let deferredPrompt = null;
+  let banner = null;
+
+  function ensureBanner() {
+    if (banner) return banner;
+    banner = document.createElement('div');
+    banner.className = 'install-banner';
+    banner.hidden = true;
+    banner.innerHTML = `
+      <span class="install-banner-text"></span>
+      <button type="button" class="install-banner-btn" hidden>Install</button>
+      <button type="button" class="install-banner-close" aria-label="Tutup">×</button>
+    `;
+    document.body.appendChild(banner);
+
+    banner.querySelector('.install-banner-close').addEventListener('click', () => {
+      banner.hidden = true;
+      try {
+        localStorage.setItem(DISMISS_KEY, '1');
+      } catch (e) {
+        // abaikan kalau localStorage tidak tersedia
+      }
+    });
+
+    banner.querySelector('.install-banner-btn').addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      banner.hidden = true;
+    });
+
+    return banner;
+  }
+
+  function showBanner(text, withInstallButton) {
+    const el = ensureBanner();
+    el.querySelector('.install-banner-text').textContent = text;
+    el.querySelector('.install-banner-btn').hidden = !withInstallButton;
+    el.hidden = false;
+  }
+
+  // Chrome/Edge/Android: tangkap event bawaan, tampilkan tombol "Install" kita sendiri.
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredPrompt = event;
+    showBanner('Install SplitKuy ke HP/laptop kamu biar gampang dibuka.', true);
+  });
+
+  window.addEventListener('appinstalled', () => {
+    if (banner) banner.hidden = true;
+    deferredPrompt = null;
+  });
+
+  // iOS Safari: tidak ada beforeinstallprompt sama sekali, kasih instruksi manual.
+  if (isIos) {
+    showBanner('Tap tombol Share (kotak + panah ke atas), lalu pilih "Add to Home Screen" untuk install.', false);
+  }
+})();
 
 })();
