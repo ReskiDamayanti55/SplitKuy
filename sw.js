@@ -1,7 +1,7 @@
 // sw.js — service worker, strategi cache-first untuk semua asset statis.
 // Naikkan CACHE_NAME setiap deploy baru supaya cache lama otomatis dibersihkan.
 
-const CACHE_NAME = 'splitkuy-v2';
+const CACHE_NAME = 'splitkuy-v7';
 
 const ASSETS_TO_CACHE = [
   './',
@@ -16,7 +16,20 @@ const ASSETS_TO_CACHE = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS_TO_CACHE)).then(() => self.skipWaiting())
+    caches
+      .open(CACHE_NAME)
+      .then((cache) =>
+        // { cache: 'reload' } penting: cache.addAll() biasa masih bisa kena HTTP cache
+        // browser yang basi (bukan selalu network fresh), jadi tiap asset di-fetch manual
+        // sambil paksa lewati HTTP cache supaya isi Cache Storage service worker selalu
+        // sinkron dengan file terbaru saat versi CACHE_NAME naik.
+        Promise.all(
+          ASSETS_TO_CACHE.map((url) =>
+            fetch(url, { cache: 'reload' }).then((response) => cache.put(url, response))
+          )
+        )
+      )
+      .then(() => self.skipWaiting())
   );
 });
 

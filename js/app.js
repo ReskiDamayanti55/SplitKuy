@@ -532,23 +532,70 @@ async function renderSessionList(app) {
   const sessions = await db.getAllSessions();
 
   app.innerHTML = `
-    <header class="topbar">
-      <h1>SplitKuy</h1>
+    <header class="hero">
+      <div class="hero-bg-pattern" aria-hidden="true"></div>
+      <div class="hero-content">
+        <h1 class="hero-title">SplitKuy</h1>
+        <p class="hero-subtitle">Split bill jadi lebih mudah <span aria-hidden="true">✨</span></p>
+      </div>
     </header>
-    <main class="container">
-      <section class="panel">
-        <h2 class="section-title">Buat Sesi Baru</h2>
+    <main class="container home-container">
+      <section class="panel create-session-card">
+        <div class="create-session-header">
+          <div class="create-session-icon" aria-hidden="true">
+            <span class="sparkle sparkle-1">✦</span>
+            <span class="sparkle sparkle-2">✦</span>
+            <span class="plus-icon">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M8 2v12M2 8h12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+              </svg>
+            </span>
+          </div>
+          <div>
+            <h2 class="section-title">Buat Sesi Baru</h2>
+            <p class="create-session-desc">Mulai sesi baru untuk split bill dengan teman-temanmu</p>
+          </div>
+        </div>
         <form id="new-session-form" class="stack">
-          <input type="text" id="new-session-name" placeholder="Nama sesi/acara, mis. Buka Bareng Kantor" required />
-          <button type="submit" class="btn btn-primary">+ Buat Sesi</button>
+          <label class="input-with-icon">
+            <span class="input-icon" aria-hidden="true">📄</span>
+            <input type="text" id="new-session-name" placeholder="Nama sesi/acara, mis. Buka Bareng Kantor" required />
+          </label>
+          <button type="submit" class="btn btn-primary btn-block btn-arrow">
+            <span>+ Buat Sesi</span>
+            <span class="btn-arrow-circle" aria-hidden="true">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </button>
         </form>
       </section>
 
       <section>
-        <h2 class="section-title">Sesi Tersimpan</h2>
+        <div class="section-header">
+          <h2 class="section-title"><span aria-hidden="true">🔖</span> Sesi Tersimpan</h2>
+        </div>
         ${
           sessions.length === 0
-            ? `<div class="empty-state"><p>Belum ada sesi. Buat sesi baru untuk mulai split bill.</p></div>`
+            ? `<div class="empty-session-card">
+                <svg class="empty-illustration" viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <rect x="30" y="70" width="140" height="70" rx="10" fill="#1D9E75" opacity="0.15"/>
+                  <path d="M30 90 h50 l10 -12 h40 a10 10 0 0 1 10 10 v42 a10 10 0 0 1 -10 10 h-90 a10 10 0 0 1 -10 -10 v-30 a10 10 0 0 1 10 -10z" fill="#1D9E75"/>
+                  <path d="M85 106 l3.5 7.2 7.9 1.1 -5.7 5.6 1.3 7.9 -7 -3.7 -7 3.7 1.3 -7.9 -5.7 -5.6 7.9 -1.1z" fill="#ffffff"/>
+                  <rect x="95" y="38" width="52" height="66" rx="7" fill="#ffffff" stroke="#e1e6e4" stroke-width="1.5"/>
+                  <line x1="104" y1="54" x2="138" y2="54" stroke="#cfe9df" stroke-width="3.5" stroke-linecap="round"/>
+                  <line x1="104" y1="65" x2="138" y2="65" stroke="#cfe9df" stroke-width="3.5" stroke-linecap="round"/>
+                  <line x1="104" y1="76" x2="124" y2="76" stroke="#cfe9df" stroke-width="3.5" stroke-linecap="round"/>
+                  <path d="M148 26 l32 -13 -11 32 -6 -11z" fill="#1D9E75"/>
+                  <path d="M148 26 l15 8 -4 -19z" fill="#16805e"/>
+                  <circle cx="45" cy="45" r="2.5" fill="#1D9E75" opacity="0.5"/>
+                  <circle cx="176" cy="72" r="2" fill="#1D9E75" opacity="0.4"/>
+                  <circle cx="52" cy="122" r="2" fill="#1D9E75" opacity="0.4"/>
+                </svg>
+                <p class="empty-session-title">Belum ada sesi tersimpan</p>
+                <p class="empty-session-desc">Buat sesi baru untuk mulai split bill dan atur tagihan dengan mudah.</p>
+              </div>`
             : `<ul class="card-list" id="session-list">
                 ${sessions
                   .map(
@@ -568,11 +615,12 @@ async function renderSessionList(app) {
     </main>
   `;
 
+  const nameInput = document.getElementById('new-session-name');
+
   const form = document.getElementById('new-session-form');
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const input = document.getElementById('new-session-name');
-    const name = input.value.trim();
+    const name = nameInput.value.trim();
     if (!name) return;
     const session = await db.createSession(name);
     window.location.hash = `#/session/${session.id}`;
@@ -609,6 +657,11 @@ const db = window.SplitkuyDb;
 const { formatDate, formatRupiah, escapeHtml } = window.SplitkuyUtil;
 const calculation = window.SplitkuyCalculation;
 
+function personInitial(name) {
+  const trimmed = (name || '').trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
+}
+
 async function renderSessionDetail(app, { sessionId }) {
   const session = await db.getSession(sessionId);
   if (!session) {
@@ -621,15 +674,57 @@ async function renderSessionDetail(app, { sessionId }) {
   people.forEach((p) => (nameOf[p.id] = p.name));
 
   app.innerHTML = `
-    <header class="topbar">
-      <a href="#/" class="back-link" aria-label="Kembali">←</a>
-      <h1>${escapeHtml(session.name)}</h1>
+    <header class="hero session-hero">
+      <div class="hero-bg-pattern" aria-hidden="true"></div>
+      <svg class="session-hero-illustration" viewBox="0 0 160 140" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <g transform="rotate(-8 70 60)">
+          <rect x="45" y="10" width="55" height="80" rx="6" fill="#ffffff" opacity="0.92"/>
+          <line x1="53" y1="26" x2="92" y2="26" stroke="#cfe9df" stroke-width="3" stroke-linecap="round"/>
+          <line x1="53" y1="36" x2="92" y2="36" stroke="#cfe9df" stroke-width="3" stroke-linecap="round"/>
+          <line x1="53" y1="46" x2="80" y2="46" stroke="#cfe9df" stroke-width="3" stroke-linecap="round"/>
+          <line x1="53" y1="60" x2="92" y2="60" stroke="#cfe9df" stroke-width="3" stroke-linecap="round"/>
+          <line x1="53" y1="70" x2="76" y2="70" stroke="#cfe9df" stroke-width="3" stroke-linecap="round"/>
+        </g>
+        <g transform="rotate(6 105 85)">
+          <rect x="78" y="55" width="55" height="55" rx="16" fill="#16805e"/>
+          <circle cx="95" cy="78" r="4" fill="#fff"/>
+          <circle cx="116" cy="78" r="4" fill="#fff"/>
+          <path d="M96 92q9 7 18 0" stroke="#fff" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <circle cx="88" cy="88" r="3.5" fill="#ffffff" opacity="0.35"/>
+          <circle cx="123" cy="88" r="3.5" fill="#ffffff" opacity="0.35"/>
+        </g>
+        <path d="M138 20 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="#FBBF24"/>
+        <circle cx="18" cy="72" r="5" fill="#ffffff" opacity="0.5"/>
+        <path d="M140 55 l2.5 5.5 5.5 2.5 -5.5 2.5 -2.5 5.5 -2.5 -5.5 -5.5 -2.5 5.5 -2.5z" fill="#ffffff" opacity="0.8"/>
+      </svg>
+      <div class="hero-content">
+        <div class="hero-top-row">
+          <a href="#/" class="hero-back-btn" aria-label="Kembali">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 8H4M8 4L4 8l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+          <div class="hero-title-block">
+            <h1 class="hero-title hero-title-sm">${escapeHtml(session.name)}</h1>
+            <p class="hero-subtitle">Kelola orang dan struk dalam sesi ini <span aria-hidden="true">✨</span></p>
+          </div>
+        </div>
+      </div>
     </header>
     <main class="container">
       <section class="panel">
-        <h2 class="section-title">Orang (${people.length})</h2>
+        <div class="section-header-icon">
+          <span class="icon-box" aria-hidden="true">👥</span>
+          <div>
+            <h2 class="section-title">Orang (${people.length})</h2>
+            <p class="section-subtitle">Tambah atau kelola peserta</p>
+          </div>
+        </div>
         <form id="add-person-form" class="stack-row">
-          <input type="text" id="new-person-name" placeholder="Nama orang" required />
+          <div class="person-input-row">
+            <span class="input-plain-icon" aria-hidden="true">👤</span>
+            <input type="text" id="new-person-name" placeholder="Nama orang" required />
+          </div>
           <button type="submit" class="btn btn-primary">+ Tambah</button>
         </form>
         ${
@@ -639,7 +734,8 @@ async function renderSessionDetail(app, { sessionId }) {
                 ${people
                   .map(
                     (p) => `
-                  <li class="chip" data-id="${p.id}">
+                  <li class="chip person-chip" data-id="${p.id}">
+                    <span class="chip-avatar" aria-hidden="true">${escapeHtml(personInitial(p.name))}</span>
                     <span class="chip-name" data-id="${p.id}">${escapeHtml(p.name)}</span>
                     <button class="chip-remove" data-action="delete-person" data-id="${p.id}" title="Hapus orang" aria-label="Hapus ${escapeHtml(p.name)}">×</button>
                   </li>`
@@ -651,8 +747,14 @@ async function renderSessionDetail(app, { sessionId }) {
 
       <section class="panel">
         <div class="section-header">
-          <h2 class="section-title">Struk (${receipts.length})</h2>
-          <a class="btn btn-primary btn-sm" href="#/session/${sessionId}/receipt/new">+ Tambah Struk</a>
+          <div class="section-header-icon">
+            <span class="icon-box icon-box-dark" aria-hidden="true">📄</span>
+            <div>
+              <h2 class="section-title">Struk (${receipts.length})</h2>
+              <p class="section-subtitle">Daftar struk dalam sesi ini</p>
+            </div>
+          </div>
+          <a class="btn btn-outline btn-sm" href="#/session/${sessionId}/receipt/new">+ Tambah Struk</a>
         </div>
         ${
           receipts.length === 0
@@ -662,10 +764,13 @@ async function renderSessionDetail(app, { sessionId }) {
                   .map((r) => {
                     const result = calculation.calculateReceipt(r);
                     return `
-                  <li class="card" data-id="${r.id}">
+                  <li class="card receipt-card" data-id="${r.id}">
                     <a class="card-link" href="#/session/${sessionId}/receipt/${r.id}/edit">
-                      <div class="card-title">${escapeHtml(r.name || '(Tanpa nama)')}</div>
-                      <div class="card-meta">${formatDate(r.date)} · Payer: ${escapeHtml(nameOf[r.payerId] || '-')} · ${formatRupiah(result.receiptTotal)}</div>
+                      <span class="receipt-icon" aria-hidden="true">🧾</span>
+                      <div class="card-text">
+                        <div class="card-title">${escapeHtml(r.name || '(Tanpa nama)')}</div>
+                        <div class="card-meta">📅 ${formatDate(r.date)} · 👤 Payer: ${escapeHtml(nameOf[r.payerId] || '-')} · 💰 ${formatRupiah(result.receiptTotal)}</div>
+                      </div>
                     </a>
                     <button class="btn-icon danger" data-action="delete-receipt" data-id="${r.id}" title="Hapus struk" aria-label="Hapus struk">🗑</button>
                   </li>`;
@@ -675,7 +780,18 @@ async function renderSessionDetail(app, { sessionId }) {
         }
       </section>
 
-      <a class="btn btn-secondary btn-block" href="#/session/${sessionId}/summary">📊 Lihat Rekap</a>
+      <a class="rekap-card" href="#/session/${sessionId}/summary">
+        <span class="rekap-card-icon" aria-hidden="true">📊</span>
+        <div class="rekap-card-text">
+          <div class="rekap-card-title">Lihat Rekap</div>
+          <div class="rekap-card-subtitle">Lihat ringkasan pembayaran &amp; saldo per orang</div>
+        </div>
+        <span class="rekap-card-chevron" aria-hidden="true">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+      </a>
     </main>
   `;
 
@@ -756,6 +872,25 @@ function toIsoDateInputValue(iso) {
   return iso.slice(0, 10);
 }
 
+const AVATAR_COLORS = ['#1D9E75', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
+
+function avatarColorFor(id) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
+function avatarHtml(pid) {
+  return `<span class="avatar" style="background:${avatarColorFor(pid)}" aria-hidden="true">👤</span>`;
+}
+
+const SPLIT_BILL_TIPS = [
+  'PP1, Service Charge, dan Diskon selalu dibagi rata per kepala ke semua partisipan struk — bukan proporsional ke besar pesanan masing-masing.',
+  'Assign tiap item ke orang yang benar-benar pesan — item yang di-share ke beberapa orang otomatis dibagi rata harganya.',
+  'Payer adalah orang yang bayar duluan ke kasir — nanti orang lain akan transfer balik ke Payer sesuai porsi masing-masing.',
+  'Kalau nilai PP1/SC/Diskon di struk fisik sudah dalam Rupiah (bukan persen), klik toggle "Rp" supaya tidak salah hitung.',
+];
+
 async function renderReceiptForm(app, { sessionId, receiptId }) {
   const session = await db.getSession(sessionId);
   if (!session) {
@@ -817,7 +952,11 @@ async function renderReceiptForm(app, { sessionId, receiptId }) {
     const warning = adjustWarningText(field.key);
     return `
       <div class="field-row">
-        <label>${field.label}</label>
+        <div class="adjust-field-label-row">
+          <span class="icon-box icon-box-sm" aria-hidden="true">${field.icon}</span>
+          <label>${field.label}</label>
+          <span class="info-icon" tabindex="0" title="${escapeHtml(field.info)}" aria-label="${escapeHtml(field.info)}">ℹ️</span>
+        </div>
         <div class="adjust-input">
           <div class="type-toggle" data-field="${field.key}">
             <button type="button" class="toggle-btn ${draft[field.key].type === 'percent' ? 'active' : ''}" data-type="percent">%</button>
@@ -839,6 +978,7 @@ async function renderReceiptForm(app, { sessionId, receiptId }) {
         (item, idx) => `
       <div class="item-row" data-index="${idx}">
         <div class="item-row-top">
+          <span class="icon-box icon-box-sm" aria-hidden="true">🍴</span>
           <input type="text" class="item-name" data-index="${idx}" placeholder="Nama item" value="${escapeHtml(item.name)}" />
           <button type="button" class="btn-icon danger" data-action="remove-item" data-index="${idx}" title="Hapus item" aria-label="Hapus item">🗑</button>
         </div>
@@ -885,14 +1025,18 @@ async function renderReceiptForm(app, { sessionId, receiptId }) {
         <div class="preview-line"><span>Diskon</span><span>-${formatRupiah(result.discountAmount)}</span></div>
         <div class="preview-line preview-total"><span>Total Struk</span><span>${formatRupiah(result.receiptTotal)}</span></div>
       </div>
-      <ul class="preview-people">
+      <div class="preview-people-grid">
         ${draft.participantIds
           .map(
             (pid) => `
-          <li><span>${escapeHtml(nameOf[pid] || '?')}</span><span>${formatRupiah(result.personTotal[pid] || 0)}</span></li>`
+          <div class="preview-person-card">
+            ${avatarHtml(pid)}
+            <span class="preview-person-name">${escapeHtml(nameOf[pid] || '?')}</span>
+            <span class="preview-person-amount">${formatRupiah(result.personTotal[pid] || 0)}</span>
+          </div>`
           )
           .join('')}
-      </ul>
+      </div>
     `;
   }
 
@@ -903,43 +1047,91 @@ async function renderReceiptForm(app, { sessionId, receiptId }) {
 
   function render() {
     app.innerHTML = `
-      <header class="topbar">
-        <a href="#/session/${sessionId}" class="back-link" aria-label="Kembali">←</a>
-        <h1>${existing ? 'Edit Struk' : 'Struk Baru'}</h1>
+      <header class="hero receipt-hero">
+        <div class="hero-bg-pattern" aria-hidden="true"></div>
+        <div class="hero-content">
+          <div class="hero-top-row">
+            <a href="#/session/${sessionId}" class="hero-back-btn" aria-label="Kembali">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 8H4M8 4L4 8l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+            <div class="hero-title-block">
+              <h1 class="hero-title hero-title-sm">${existing ? 'Edit Struk' : 'Struk Baru'}</h1>
+              <p class="hero-subtitle">${existing ? 'Ubah detail struk ini' : 'Buat struk untuk mulai split bill'} <span aria-hidden="true">✨</span></p>
+            </div>
+            <button type="button" id="tips-btn" class="hero-tips-btn">
+              <span aria-hidden="true">💡</span> Tips Split Bill
+            </button>
+          </div>
+        </div>
       </header>
+
+      <div class="modal-overlay" id="tips-modal-overlay" hidden>
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>💡 Tips Split Bill</h3>
+            <button type="button" id="tips-modal-close" class="modal-close" aria-label="Tutup">×</button>
+          </div>
+          <ul class="tips-list">
+            ${SPLIT_BILL_TIPS.map((tip) => `<li>${escapeHtml(tip)}</li>`).join('')}
+          </ul>
+        </div>
+      </div>
+
       <main class="container">
         ${people.length === 0 ? `<div class="empty-state"><p>Belum ada orang di sesi ini. Tambahkan orang dulu di halaman detail sesi.</p><a class="btn" href="#/session/${sessionId}">Kembali ke Detail Sesi</a></div>` : `
         <form id="receipt-form" class="stack">
           ${renderErrors()}
 
           <section class="panel">
-            <div class="field-row">
-              <label for="receipt-name">Nama toko / keterangan</label>
-              <input type="text" id="receipt-name" value="${escapeHtml(draft.name)}" placeholder="mis. Warung Padang Sederhana" />
+            <div class="section-header-icon">
+              <span class="icon-box" aria-hidden="true">📄</span>
+              <h2 class="section-title">Informasi Struk</h2>
             </div>
-            <div class="field-row">
-              <label for="receipt-date">Tanggal</label>
-              <input type="date" id="receipt-date" value="${toIsoDateInputValue(draft.date)}" />
-            </div>
-            <div class="field-row">
-              <label for="payer-select">Payer (bayar duluan)</label>
-              <select id="payer-select">
-                ${draft.participantIds
-                  .map((pid) => `<option value="${pid}" ${draft.payerId === pid ? 'selected' : ''}>${escapeHtml(nameOf[pid] || '?')}</option>`)
-                  .join('')}
-              </select>
-            </div>
+            <label class="field-icon-row">
+              <span class="icon-box icon-box-sm" aria-hidden="true">🏪</span>
+              <span class="field-icon-content">
+                <span class="field-icon-label">Nama toko / keterangan</span>
+                <input type="text" id="receipt-name" value="${escapeHtml(draft.name)}" placeholder="mis. Warung Padang Sederhana" />
+              </span>
+            </label>
+            <label class="field-icon-row">
+              <span class="icon-box icon-box-sm" aria-hidden="true">📅</span>
+              <span class="field-icon-content">
+                <span class="field-icon-label">Tanggal</span>
+                <input type="date" id="receipt-date" value="${toIsoDateInputValue(draft.date)}" />
+              </span>
+            </label>
+            <label class="field-icon-row">
+              <span class="icon-box icon-box-sm" aria-hidden="true">👤</span>
+              <span class="field-icon-content">
+                <span class="field-icon-label">Payer (bayar duluan)</span>
+                <select id="payer-select">
+                  ${draft.participantIds
+                    .map((pid) => `<option value="${pid}" ${draft.payerId === pid ? 'selected' : ''}>${escapeHtml(nameOf[pid] || '?')}</option>`)
+                    .join('')}
+                </select>
+              </span>
+            </label>
           </section>
 
           <section class="panel">
-            <h2 class="section-title">Partisipan Struk Ini</h2>
+            <div class="section-header">
+              <div class="section-header-icon">
+                <span class="icon-box" aria-hidden="true">👥</span>
+                <h2 class="section-title">Partisipan Struk Ini</h2>
+              </div>
+              <button type="button" id="kelola-btn" class="btn btn-secondary btn-sm">✏️ Kelola</button>
+            </div>
             <div class="chip-list" id="participant-toggles">
               ${people
                 .map(
                   (p) => `
-                <label class="assign-chip ${draft.participantIds.includes(p.id) ? 'checked' : ''}">
+                <label class="assign-chip participant-chip ${draft.participantIds.includes(p.id) ? 'checked' : ''}">
                   <input type="checkbox" class="participant-checkbox" data-person-id="${p.id}" ${draft.participantIds.includes(p.id) ? 'checked' : ''} />
                   <span>${escapeHtml(p.name)}</span>
+                  ${avatarHtml(p.id)}
                 </label>`
                 )
                 .join('')}
@@ -948,30 +1140,52 @@ async function renderReceiptForm(app, { sessionId, receiptId }) {
 
           <section class="panel">
             <div class="section-header">
-              <h2 class="section-title">Item</h2>
+              <div class="section-header-icon">
+                <span class="icon-box" aria-hidden="true">🛍️</span>
+                <h2 class="section-title">Item</h2>
+              </div>
               <button type="button" id="add-item-btn" class="btn btn-secondary btn-sm">+ Tambah Item</button>
             </div>
             <div id="items-container">${renderItemsSection()}</div>
           </section>
 
           <section class="panel">
-            <h2 class="section-title">Pajak, Service Charge &amp; Diskon</h2>
+            <div class="section-header-icon">
+              <span class="icon-box" aria-hidden="true">📊</span>
+              <h2 class="section-title">Pajak, Service Charge &amp; Diskon</h2>
+            </div>
             <p class="hint">Dibagi rata per kepala ke semua partisipan struk ini (bukan proporsional).</p>
-            ${adjustField({ key: 'pp1', label: 'PP1 (Pajak)' })}
-            ${adjustField({ key: 'sc', label: 'Service Charge' })}
-            ${adjustField({ key: 'discount', label: 'Diskon' })}
+            ${adjustField({ key: 'pp1', label: 'PP1 (Pajak)', icon: '👤', info: 'Pajak restoran/PB1, biasanya sekitar 10% dari subtotal.' })}
+            ${adjustField({ key: 'sc', label: 'Service Charge', icon: '✅', info: 'Biaya layanan restoran, biasanya sekitar 5–10% dari subtotal.' })}
+            ${adjustField({ key: 'discount', label: 'Diskon', icon: '％', info: 'Potongan harga dari promo/voucher, mengurangi total struk.' })}
           </section>
 
           <section class="panel">
-            <h2 class="section-title">Live Preview</h2>
+            <div class="section-header-icon">
+              <span class="icon-box" aria-hidden="true">👁️</span>
+              <h2 class="section-title">Live Preview</h2>
+            </div>
             <div id="preview-section">${renderPreview()}</div>
           </section>
 
-          <button type="submit" class="btn btn-primary btn-block">Simpan Struk</button>
+          <button type="submit" class="btn btn-primary btn-block">💾 Simpan Struk</button>
         </form>
         `}
       </main>
     `;
+
+    const tipsBtn = document.getElementById('tips-btn');
+    const tipsOverlay = document.getElementById('tips-modal-overlay');
+    if (tipsBtn && tipsOverlay) {
+      tipsBtn.addEventListener('click', () => {
+        tipsOverlay.hidden = false;
+      });
+      tipsOverlay.addEventListener('click', (e) => {
+        if (e.target === tipsOverlay || e.target.closest('#tips-modal-close')) {
+          tipsOverlay.hidden = true;
+        }
+      });
+    }
 
     if (people.length === 0) return;
     attachListeners();
@@ -1001,6 +1215,18 @@ async function renderReceiptForm(app, { sessionId, receiptId }) {
     });
     document.getElementById('payer-select').addEventListener('change', (e) => {
       draft.payerId = e.target.value;
+    });
+
+    document.getElementById('kelola-btn').addEventListener('click', async () => {
+      const name = window.prompt('Nama orang baru untuk ditambahkan ke sesi ini:');
+      if (name == null) return;
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      const person = await db.addPerson(sessionId, trimmed);
+      people.push(person);
+      nameOf[person.id] = person.name;
+      draft.participantIds.push(person.id);
+      render();
     });
 
     document.getElementById('participant-toggles').addEventListener('change', (e) => {
@@ -1148,6 +1374,19 @@ const calculation = window.SplitkuyCalculation;
 const exportExcel = window.SplitkuyExport;
 const { formatRupiah, formatDate, escapeHtml } = window.SplitkuyUtil;
 
+const AVATAR_COLORS = ['#1D9E75', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
+
+function avatarColorFor(id) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+}
+
+function personInitial(name) {
+  const trimmed = (name || '').trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
+}
+
 async function renderSummary(app, { sessionId }) {
   const session = await db.getSession(sessionId);
   if (!session) {
@@ -1161,9 +1400,24 @@ async function renderSummary(app, { sessionId }) {
 
   if (people.length === 0 || receipts.length === 0) {
     app.innerHTML = `
-      <header class="topbar">
-        <a href="#/session/${sessionId}" class="back-link" aria-label="Kembali">←</a>
-        <h1>Rekap — ${escapeHtml(session.name)}</h1>
+      <header class="hero summary-hero">
+        <div class="hero-bg-pattern" aria-hidden="true"></div>
+        <div class="hero-content">
+          <div class="hero-top-row">
+            <a href="#/session/${sessionId}" class="hero-back-btn" aria-label="Kembali">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 8H4M8 4L4 8l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </a>
+            <div class="hero-title-block">
+              <h1 class="hero-title hero-title-sm">Rekap — ${escapeHtml(session.name)}</h1>
+              <p class="hero-subtitle">Ringkasan total per orang</p>
+            </div>
+          </div>
+        </div>
+        <svg class="hero-wave" viewBox="0 0 400 44" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,16 C90,44 180,4 260,14 C320,22 360,8 400,0 L400,44 L0,44 Z" style="fill:var(--color-bg)"/>
+        </svg>
       </header>
       <main class="container">
         <div class="empty-state"><p>Belum cukup data untuk rekap. Pastikan ada orang dan minimal 1 struk.</p></div>
@@ -1177,57 +1431,135 @@ async function renderSummary(app, { sessionId }) {
   const collator = new Intl.Collator('id', { numeric: true, sensitivity: 'base' });
 
   app.innerHTML = `
-    <header class="topbar">
-      <a href="#/session/${sessionId}" class="back-link" aria-label="Kembali">←</a>
-      <h1>Rekap — ${escapeHtml(session.name)}</h1>
+    <header class="hero summary-hero">
+      <div class="hero-bg-pattern" aria-hidden="true"></div>
+      <svg class="summary-hero-illustration" viewBox="0 0 140 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect x="8" y="6" width="62" height="80" rx="7" fill="#ffffff"/>
+        <line x1="18" y1="22" x2="50" y2="22" stroke="#cfe9df" stroke-width="3.5" stroke-linecap="round"/>
+        <line x1="18" y1="32" x2="50" y2="32" stroke="#cfe9df" stroke-width="3.5" stroke-linecap="round"/>
+        <circle cx="39" cy="58" r="16" fill="#e6f6f0"/>
+        <path d="M39 42 A16 16 0 0 1 55 58 L39 58 Z" fill="#1D9E75"/>
+        <path d="M39 42 A16 16 0 0 0 25 66 L39 58 Z" fill="#16805e"/>
+        <rect x="64" y="40" width="46" height="58" rx="6" fill="#16805e"/>
+        <rect x="71" y="47" width="32" height="12" rx="2" fill="#ffffff" opacity="0.9"/>
+        <circle cx="76" cy="70" r="3.4" fill="#ffffff" opacity="0.85"/>
+        <circle cx="87" cy="70" r="3.4" fill="#ffffff" opacity="0.85"/>
+        <circle cx="98" cy="70" r="3.4" fill="#ffffff" opacity="0.85"/>
+        <circle cx="76" cy="81" r="3.4" fill="#ffffff" opacity="0.85"/>
+        <circle cx="87" cy="81" r="3.4" fill="#ffffff" opacity="0.85"/>
+        <circle cx="98" cy="81" r="3.4" fill="#ffffff" opacity="0.85"/>
+        <path d="M120 8 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="#ffffff" opacity="0.9"/>
+      </svg>
+      <div class="hero-content">
+        <div class="hero-top-row">
+          <a href="#/session/${sessionId}" class="hero-back-btn" aria-label="Kembali">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 8H4M8 4L4 8l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+          <div class="hero-title-block">
+            <h1 class="hero-title hero-title-sm">Rekap — ${escapeHtml(session.name)}</h1>
+            <p class="hero-subtitle">Ringkasan total per orang</p>
+          </div>
+        </div>
+      </div>
+      <svg class="hero-wave" viewBox="0 0 400 44" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0,16 C90,44 180,4 260,14 C320,22 360,8 400,0 L400,44 L0,44 Z" style="fill:var(--color-bg)"/>
+      </svg>
     </header>
     <main class="container">
-      <section class="panel">
-        <h2 class="section-title">Total Per Orang</h2>
-        <ul class="summary-people" id="summary-people">
-          ${session.personIds
-            .map((pid) => {
-              const perReceipt = settlement.receiptResults
-                .filter(({ receipt }) => receipt.participantIds.includes(pid))
-                .sort((a, b) => collator.compare(a.receipt.name, b.receipt.name));
-              const myObligations = (payerObligations[pid] || []).sort((a, b) =>
-                collator.compare(nameOf[a.payerId] || '', nameOf[b.payerId] || '')
-              );
-              return `
-              <li class="summary-person" data-id="${pid}">
-                <button type="button" class="summary-person-toggle" data-id="${pid}">
+      <div class="section-header-icon summary-section-header">
+        <span class="icon-box icon-box-badged" aria-hidden="true">
+          👥
+          <span class="icon-box-badge">💰</span>
+        </span>
+        <div>
+          <h2 class="section-title">Total Per Orang</h2>
+          <p class="section-subtitle">Rincian total &amp; transfer antar peserta</p>
+        </div>
+      </div>
+
+      <ul class="summary-people" id="summary-people">
+        ${session.personIds
+          .map((pid) => {
+            const perReceipt = settlement.receiptResults
+              .filter(({ receipt }) => receipt.participantIds.includes(pid))
+              .sort((a, b) => collator.compare(a.receipt.name, b.receipt.name));
+            const myObligations = (payerObligations[pid] || []).sort((a, b) =>
+              collator.compare(nameOf[a.payerId] || '', nameOf[b.payerId] || '')
+            );
+            const isBalanced = myObligations.length === 0;
+            return `
+            <li class="summary-person panel" data-id="${pid}">
+              <button type="button" class="summary-person-toggle" data-id="${pid}">
+                <span class="summary-avatar-wrap">
+                  <span class="summary-avatar" style="background:${avatarColorFor(pid)}">${escapeHtml(personInitial(nameOf[pid]))}</span>
+                  <span class="summary-avatar-badge" aria-hidden="true">👤</span>
+                </span>
+                <span class="summary-person-info">
                   <span class="summary-person-name">${escapeHtml(nameOf[pid] || '?')}</span>
+                  <span class="summary-status-badge ${isBalanced ? 'balanced' : 'pending'}">${isBalanced ? '✓ Saldo seimbang' : 'Perlu transfer'}</span>
+                </span>
+                <span class="summary-person-total-wrap">
+                  <span class="summary-total-label">Total</span>
                   <span class="summary-person-total">${formatRupiah(settlement.totalBill[pid] || 0)}</span>
-                  <span class="chevron">▾</span>
-                </button>
-                <div class="summary-person-detail" id="detail-${pid}" hidden>
+                </span>
+                <span class="chevron-circle" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+              </button>
+              <div class="summary-person-detail" id="detail-${pid}" hidden>
+                <div class="detail-box">
                   ${
                     perReceipt.length === 0
                       ? `<p class="hint">Tidak ikut struk manapun.</p>`
-                      : `<ul class="detail-list">
-                        ${perReceipt
+                      : perReceipt
                           .map(
                             ({ receipt, result }) => `
-                          <li><span>${escapeHtml(receipt.name)}</span><span>${formatRupiah(result.personTotal[pid] || 0)}</span></li>`
+                        <div class="detail-row">
+                          <span class="detail-icon" aria-hidden="true">🧾</span>
+                          <span class="detail-label">${escapeHtml(receipt.name)}</span>
+                          <span class="detail-amount">${formatRupiah(result.personTotal[pid] || 0)}</span>
+                        </div>`
                           )
-                          .join('')}
-                      </ul>`
+                          .join('')
                   }
-                  <div class="detail-line"><span>Total</span><span>${formatRupiah(settlement.totalBill[pid] || 0)}</span></div>
+                  <div class="detail-row">
+                    <span class="detail-icon" aria-hidden="true">💳</span>
+                    <span class="detail-label detail-label-bold">Total</span>
+                    <span class="detail-amount detail-amount-bold">${formatRupiah(settlement.totalBill[pid] || 0)}</span>
+                  </div>
                   ${myObligations
                     .map(
                       (o) => `
-                  <div class="detail-line"><span>Transfer ke ${escapeHtml(nameOf[o.payerId] || o.payerId)}</span><span class="negative">${formatRupiah(o.amount)}</span></div>`
+                  <div class="detail-row">
+                    <span class="detail-icon detail-icon-danger" aria-hidden="true">📤</span>
+                    <span class="detail-label">Transfer ke ${escapeHtml(nameOf[o.payerId] || o.payerId)}</span>
+                    <span class="detail-amount negative">- ${formatRupiah(o.amount)}</span>
+                  </div>`
                     )
                     .join('')}
                 </div>
-              </li>`;
-            })
-            .join('')}
-        </ul>
-      </section>
+              </div>
+            </li>`;
+          })
+          .join('')}
+      </ul>
 
-      <button type="button" id="export-btn" class="btn btn-primary btn-block">⬇ Export Excel</button>
+      <button type="button" id="export-btn" class="export-cta">
+        <span class="export-cta-icon" aria-hidden="true">XLS</span>
+        <span class="export-cta-text">
+          <span class="export-cta-title">Export Excel</span>
+          <span class="export-cta-subtitle">Unduh rekap dalam format Excel</span>
+        </span>
+        <span class="export-cta-download" aria-hidden="true">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8 2v9M4 8l4 3 4-3M3 14h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>
+      </button>
       <p class="hint" id="export-status" role="status"></p>
     </main>
   `;
