@@ -1667,6 +1667,18 @@ if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
   });
 }
 
+// ---------- Bersihkan sisa preferensi tema "kawaii" (fitur ini sudah dihapus) ----------
+// Beberapa user mungkin masih punya data-theme=cute tersimpan dari versi sebelumnya —
+// bersihkan supaya mereka otomatis kembali ke tampilan default satu-satunya.
+(function cleanupOldThemePreference() {
+  document.documentElement.removeAttribute('data-theme');
+  try {
+    localStorage.removeItem('splitkuy-theme');
+  } catch (e) {
+    // localStorage bisa gagal (mode private dsb) — abaikan.
+  }
+})();
+
 // ---------- Install App banner ----------
 // Browser tidak selalu menampilkan prompt install secara otomatis (Chrome punya
 // heuristik engagement sendiri, dan iOS Safari tidak pernah menyediakan prompt
