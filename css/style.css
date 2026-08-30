@@ -1488,3 +1488,87 @@ input[type='number'] {
   flex-shrink: 0;
 }
 
+/* Scan Struk (OCR) */
+
+.item-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.scan-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 8px;
+  text-align: center;
+}
+
+.scan-spinner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid var(--color-primary-light);
+  border-top-color: var(--color-primary);
+  animation: scan-spin 0.8s linear infinite;
+}
+
+@keyframes scan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.scan-review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 40vh;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+
+.scan-review-row {
+  display: grid;
+  grid-template-columns: auto 1fr 70px 50px;
+  gap: 6px;
+  align-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+}
+
+.scan-review-row input[type='checkbox'] {
+  width: auto;
+  accent-color: var(--color-primary);
+}
+
+.scan-review-row input[type='text'],
+.scan-review-row input[type='number'] {
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+
+.scan-raw-text {
+  margin-bottom: 12px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.scan-raw-text summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.scan-raw-text pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  margin-top: 8px;
+  max-height: 30vh;
+  overflow-y: auto;
+}
+

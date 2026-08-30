@@ -1,7 +1,7 @@
 // sw.js — service worker, strategi cache-first untuk semua asset statis.
 // Naikkan CACHE_NAME setiap deploy baru supaya cache lama otomatis dibersihkan.
 
-const CACHE_NAME = 'splitkuy-v12';
+const CACHE_NAME = 'splitkuy-v14';
 
 const ASSETS_TO_CACHE = [
   './',

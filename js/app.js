@@ -1079,6 +1079,16 @@ async function renderReceiptForm(app, { sessionId, receiptId }) {
         </div>
       </div>
 
+      <div class="modal-overlay" id="scan-modal-overlay" hidden>
+        <div class="modal-card">
+          <div class="modal-header">
+            <h3>📷 Scan Struk</h3>
+            <button type="button" id="scan-modal-close" class="modal-close" aria-label="Tutup">×</button>
+          </div>
+          <div id="scan-modal-body"></div>
+        </div>
+      </div>
+
       <main class="container">
         ${people.length === 0 ? `<div class="empty-state"><p>Belum ada orang di sesi ini. Tambahkan orang dulu di halaman detail sesi.</p><a class="btn" href="#/session/${sessionId}">Kembali ke Detail Sesi</a></div>` : `
         <form id="receipt-form" class="stack">
@@ -1144,8 +1154,13 @@ async function renderReceiptForm(app, { sessionId, receiptId }) {
                 <span class="icon-box" aria-hidden="true">🛍️</span>
                 <h2 class="section-title">Item</h2>
               </div>
-              <button type="button" id="add-item-btn" class="btn btn-secondary btn-sm">+ Tambah Item</button>
+              <div class="item-header-actions">
+                <button type="button" id="scan-receipt-btn" class="btn btn-secondary btn-sm">📷 Scan Struk</button>
+                <button type="button" id="add-item-btn" class="btn btn-secondary btn-sm">+ Tambah Item</button>
+              </div>
             </div>
+            <p class="hint">Atau upload foto struk — item akan coba dibaca otomatis (hasilnya perlu dicek dulu sebelum ditambahkan).</p>
+            <input type="file" id="scan-receipt-input" accept="image/*" hidden />
             <div id="items-container">${renderItemsSection()}</div>
           </section>
 
@@ -1253,6 +1268,8 @@ async function renderReceiptForm(app, { sessionId, receiptId }) {
       render();
     });
 
+    setupReceiptScan();
+
     const itemsContainer = document.getElementById('items-container');
     itemsContainer.addEventListener('click', (e) => {
       const removeBtn = e.target.closest('button[data-action="remove-item"]');
@@ -1332,6 +1349,199 @@ async function renderReceiptForm(app, { sessionId, receiptId }) {
       }
       window.location.hash = `#/session/${sessionId}`;
     });
+  }
+
+  // ---------- Scan Struk (OCR) ----------
+  // Tesseract.js (lib/tesseract/) di-vendor lokal supaya tetap "tanpa server", tapi TIDAK
+  // dimuat di setiap kunjungan — hanya di-download saat tombol "Scan Struk" pertama kali
+  // dipakai (butuh internet sekali di percobaan pertama), lalu otomatis ke-cache service
+  // worker untuk dipakai lagi secara offline setelahnya.
+  let tesseractScriptPromise = null;
+  function loadTesseractScript() {
+    if (window.Tesseract) return Promise.resolve();
+    if (tesseractScriptPromise) return tesseractScriptPromise;
+    tesseractScriptPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = './lib/tesseract/tesseract.min.js';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Gagal memuat library OCR. Pastikan koneksi internet aktif (hanya dibutuhkan sekali).'));
+      document.head.appendChild(script);
+    });
+    return tesseractScriptPromise;
+  }
+
+  // Heuristik sederhana: cari baris yang diakhiri angka mirip harga, buang baris yang
+  // jelas bukan item (total/pajak/alamat/dsb). Tidak akan sempurna untuk semua format
+  // struk — makanya hasilnya selalu direview dulu sebelum masuk ke daftar item.
+  const SCAN_SKIP_KEYWORDS =
+    /total|subtotal|sub total|pajak|\btax\b|ppn|service|layanan|diskon|discount|kembali|change|\bcash\b|tunai|qris|payment|metode|bayar|grand|invoice|npwp|alamat|jl\.|kasir|cashier|\bserver\b|\btable\b|\bmeja\b|\bdate\b|tanggal|waktu|\btime\b|\bpax\b|purpose|dine in|struk|receipt|terima kasih|thank you|^items?$|^qty$|jumlah|harga satuan|ongkir|biaya|gratis|status pesanan|lokasi tujuan|detail penerima|pengiriman|no\. /i;
+
+  function parseReceiptText(text) {
+    const lines = text
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean);
+    const priceRegex = /(\d{1,3}(?:[.,]\d{3})+|\d{4,})(?:[.,]\d{2})?\s*$/;
+    const qtyPrefixRegex = /^(\d{1,2})\s*[xX]\s+/;
+    const results = [];
+    for (const line of lines) {
+      if (SCAN_SKIP_KEYWORDS.test(line)) continue;
+      const priceMatch = line.match(priceRegex);
+      if (!priceMatch) continue;
+      const price = parseInt(priceMatch[1].replace(/[.,]/g, ''), 10);
+      if (!price || price < 500 || price > 50000000) continue;
+      let name = line.slice(0, priceMatch.index).trim();
+      let qty = 1;
+      const qtyMatch = name.match(qtyPrefixRegex);
+      if (qtyMatch) {
+        qty = parseInt(qtyMatch[1], 10) || 1;
+        name = name.slice(qtyMatch[0].length).trim();
+      }
+      name = name.replace(/^[-•*:.]+\s*/, '').trim();
+      if (!name || name.length < 2 || /^\d+$/.test(name)) continue;
+      results.push({ name, price, qty });
+    }
+    return results;
+  }
+
+  function setupReceiptScan() {
+    const scanBtn = document.getElementById('scan-receipt-btn');
+    const scanInput = document.getElementById('scan-receipt-input');
+    const scanOverlay = document.getElementById('scan-modal-overlay');
+    const scanBody = document.getElementById('scan-modal-body');
+    const scanClose = document.getElementById('scan-modal-close');
+    if (!scanBtn || !scanInput || !scanOverlay || !scanBody) return;
+
+    function closeScanModal() {
+      scanOverlay.hidden = true;
+      scanInput.value = '';
+    }
+
+    scanOverlay.addEventListener('click', (e) => {
+      if (e.target === scanOverlay || e.target.closest('#scan-modal-close')) closeScanModal();
+    });
+
+    scanBtn.addEventListener('click', () => {
+      if (window.location.protocol === 'file:') {
+        scanOverlay.hidden = false;
+        scanBody.innerHTML = `
+          <p class="hint">Fitur Scan Struk butuh Web Worker, dan browser memblokir Web Worker saat aplikasi dibuka langsung lewat file (double-click).</p>
+          <p class="hint">Buka aplikasi ini lewat alamat web (mis. yang sudah di-hosting di GitHub Pages) untuk pakai fitur ini — fitur lain tetap jalan normal walau dibuka lewat file.</p>
+        `;
+        return;
+      }
+      scanInput.click();
+    });
+
+    scanInput.addEventListener('change', async () => {
+      const file = scanInput.files && scanInput.files[0];
+      if (!file) return;
+
+      scanOverlay.hidden = false;
+      scanBody.innerHTML = `
+        <div class="scan-loading">
+          <div class="scan-spinner" aria-hidden="true"></div>
+          <p id="scan-progress-text">Menyiapkan OCR…</p>
+        </div>
+      `;
+
+      try {
+        await loadTesseractScript();
+        const worker = await window.Tesseract.createWorker('eng+ind', 1, {
+          workerPath: './lib/tesseract/worker.min.js',
+          corePath: './lib/tesseract/tesseract-core-simd-lstm.wasm.js',
+          langPath: './lib/tesseract/',
+          gzip: true,
+          logger: (m) => {
+            const progressEl = document.getElementById('scan-progress-text');
+            if (!progressEl) return;
+            if (m.status === 'recognizing text') {
+              progressEl.textContent = `Membaca struk… ${Math.round((m.progress || 0) * 100)}%`;
+            } else if (m.status) {
+              progressEl.textContent = `${m.status}…`;
+            }
+          },
+        });
+        const {
+          data: { text },
+        } = await worker.recognize(file);
+        await worker.terminate();
+
+        const candidates = parseReceiptText(text);
+        renderScanReview(candidates, text);
+      } catch (err) {
+        console.error(err);
+        scanBody.innerHTML = `
+          <p class="hint">Gagal membaca struk: ${escapeHtml(err.message || String(err))}</p>
+          <button type="button" class="btn btn-secondary btn-block" id="scan-retry-btn">Coba Lagi</button>
+        `;
+        const retryBtn = document.getElementById('scan-retry-btn');
+        if (retryBtn) retryBtn.addEventListener('click', () => scanInput.click());
+      }
+    });
+
+    function renderScanReview(candidates, rawText) {
+      if (candidates.length === 0) {
+        scanBody.innerHTML = `
+          <p class="hint">Tidak ada item yang terbaca dari gambar ini. Coba foto yang lebih jelas/terang, atau tambahkan item manual.</p>
+          <details class="scan-raw-text"><summary>Lihat teks mentah hasil OCR</summary><pre>${escapeHtml(rawText)}</pre></details>
+          <button type="button" class="btn btn-secondary btn-block" id="scan-retry-btn">Coba Foto Lain</button>
+        `;
+        const retryBtn = document.getElementById('scan-retry-btn');
+        if (retryBtn) retryBtn.addEventListener('click', () => scanInput.click());
+        return;
+      }
+
+      scanBody.innerHTML = `
+        <p class="hint">Hasil bacaan otomatis — cek dulu, edit kalau ada yang salah, lalu tambahkan ke daftar item.</p>
+        <div class="scan-review-list">
+          ${candidates
+            .map(
+              (c, idx) => `
+            <div class="scan-review-row">
+              <input type="checkbox" class="scan-review-check" data-index="${idx}" checked />
+              <input type="text" class="scan-review-name" data-index="${idx}" value="${escapeHtml(c.name)}" placeholder="Nama item" />
+              <input type="number" class="scan-review-price" data-index="${idx}" value="${c.price}" min="0" placeholder="Harga" />
+              <input type="number" class="scan-review-qty" data-index="${idx}" value="${c.qty}" min="1" placeholder="Qty" />
+            </div>`
+            )
+            .join('')}
+        </div>
+        <details class="scan-raw-text"><summary>Lihat teks mentah hasil OCR</summary><pre>${escapeHtml(rawText)}</pre></details>
+        <button type="button" class="btn btn-primary btn-block" id="scan-confirm-btn">+ Tambahkan ke Item</button>
+      `;
+
+      const state = candidates.map((c) => ({ ...c }));
+      scanBody.querySelectorAll('.scan-review-name').forEach((el) => {
+        el.addEventListener('input', (e) => {
+          state[Number(e.target.dataset.index)].name = e.target.value;
+        });
+      });
+      scanBody.querySelectorAll('.scan-review-price').forEach((el) => {
+        el.addEventListener('input', (e) => {
+          state[Number(e.target.dataset.index)].price = parseFloat(e.target.value) || 0;
+        });
+      });
+      scanBody.querySelectorAll('.scan-review-qty').forEach((el) => {
+        el.addEventListener('input', (e) => {
+          state[Number(e.target.dataset.index)].qty = parseInt(e.target.value, 10) || 1;
+        });
+      });
+
+      document.getElementById('scan-confirm-btn').addEventListener('click', () => {
+        const checked = Array.from(scanBody.querySelectorAll('.scan-review-check')).filter((cb) => cb.checked);
+        checked.forEach((cb) => {
+          const c = state[Number(cb.dataset.index)];
+          const item = emptyItem();
+          item.name = c.name.trim() || '(Item)';
+          item.price = c.price > 0 ? c.price : 0;
+          item.qty = c.qty > 0 ? c.qty : 1;
+          draft.items.push(item);
+        });
+        closeScanModal();
+        render();
+      });
+    }
   }
 
   function validate() {
