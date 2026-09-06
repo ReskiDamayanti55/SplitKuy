@@ -1264,7 +1264,7 @@ async function renderReceiptForm(app, { sessionId, receiptId }) {
     });
 
     document.getElementById('add-item-btn').addEventListener('click', () => {
-      draft.items.push(emptyItem());
+      draft.items.unshift(emptyItem());
       render();
     });
 
@@ -1530,14 +1530,15 @@ async function renderReceiptForm(app, { sessionId, receiptId }) {
 
       document.getElementById('scan-confirm-btn').addEventListener('click', () => {
         const checked = Array.from(scanBody.querySelectorAll('.scan-review-check')).filter((cb) => cb.checked);
-        checked.forEach((cb) => {
+        const newItems = checked.map((cb) => {
           const c = state[Number(cb.dataset.index)];
           const item = emptyItem();
           item.name = c.name.trim() || '(Item)';
           item.price = c.price > 0 ? c.price : 0;
           item.qty = c.qty > 0 ? c.qty : 1;
-          draft.items.push(item);
+          return item;
         });
+        draft.items = newItems.concat(draft.items);
         closeScanModal();
         render();
       });
