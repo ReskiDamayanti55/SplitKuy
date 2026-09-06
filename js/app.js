@@ -217,6 +217,7 @@ async function createReceipt(sessionId, data) {
     pp1: data.pp1,
     sc: data.sc,
     discount: data.discount,
+    settled: data.settled === true,
   };
   const store = await tx('receipts', 'readwrite');
   await requestToPromise(store.add(receipt));
@@ -530,6 +531,13 @@ const { formatDate, escapeHtml } = window.SplitkuyUtil;
 
 async function renderSessionList(app) {
   const sessions = await db.getAllSessions();
+  const receiptsBySession = await Promise.all(sessions.map((s) => db.getReceiptsBySession(s.id)));
+  const settlementOf = {};
+  sessions.forEach((s, idx) => {
+    const receipts = receiptsBySession[idx];
+    const settledCount = receipts.filter((r) => r.settled).length;
+    settlementOf[s.id] = { total: receipts.length, settledCount };
+  });
 
   app.innerHTML = `
     <header class="hero">
@@ -598,16 +606,24 @@ async function renderSessionList(app) {
               </div>`
             : `<ul class="card-list" id="session-list">
                 ${sessions
-                  .map(
-                    (s) => `
+                  .map((s) => {
+                    const { total, settledCount } = settlementOf[s.id];
+                    const statusBadge =
+                      total === 0
+                        ? ''
+                        : settledCount === total
+                        ? '<span class="status-pill status-pill-paid">✅ Lunas</span>'
+                        : `<span class="status-pill status-pill-pending">⏳ ${settledCount}/${total} Lunas</span>`;
+                    return `
                   <li class="card" data-id="${s.id}">
                     <a class="card-link" href="#/session/${s.id}">
                       <div class="card-title">${escapeHtml(s.name)}</div>
                       <div class="card-meta">${formatDate(s.createdAt)} · ${s.personIds.length} orang</div>
                     </a>
+                    ${statusBadge}
                     <button class="btn-icon danger" data-action="delete" data-id="${s.id}" title="Hapus sesi" aria-label="Hapus sesi">🗑</button>
-                  </li>`
-                  )
+                  </li>`;
+                  })
                   .join('')}
               </ul>`
         }
@@ -751,7 +767,13 @@ async function renderSessionDetail(app, { sessionId }) {
             <span class="icon-box icon-box-dark" aria-hidden="true">📄</span>
             <div>
               <h2 class="section-title">Struk (${receipts.length})</h2>
-              <p class="section-subtitle">Daftar struk dalam sesi ini</p>
+              <p class="section-subtitle">${
+                receipts.length === 0
+                  ? 'Daftar struk dalam sesi ini'
+                  : receipts.every((r) => r.settled)
+                  ? '✅ Semua struk sudah lunas'
+                  : `⏳ ${receipts.filter((r) => r.settled).length}/${receipts.length} struk sudah lunas`
+              }</p>
             </div>
           </div>
           <a class="btn btn-outline btn-sm" href="#/session/${sessionId}/receipt/new">+ Tambah Struk</a>
@@ -772,6 +794,12 @@ async function renderSessionDetail(app, { sessionId }) {
                         <div class="card-meta">📅 ${formatDate(r.date)} · 👤 Payer: ${escapeHtml(nameOf[r.payerId] || '-')} · 💰 ${formatRupiah(result.receiptTotal)}</div>
                       </div>
                     </a>
+                    <button
+                      class="status-pill ${r.settled ? 'status-pill-paid' : 'status-pill-pending'}"
+                      data-action="toggle-settled"
+                      data-id="${r.id}"
+                      title="${r.settled ? 'Tandai sebagai belum lunas' : 'Tandai sebagai sudah lunas'}"
+                    >${r.settled ? '✅ Lunas' : '⏳ Belum Lunas'}</button>
                     <button class="btn-icon danger" data-action="delete-receipt" data-id="${r.id}" title="Hapus struk" aria-label="Hapus struk">🗑</button>
                   </li>`;
                   })
@@ -835,6 +863,16 @@ async function renderSessionDetail(app, { sessionId }) {
   const receiptList = document.getElementById('receipt-list');
   if (receiptList) {
     receiptList.addEventListener('click', async (e) => {
+      const toggleBtn = e.target.closest('button[data-action="toggle-settled"]');
+      if (toggleBtn) {
+        const id = toggleBtn.dataset.id;
+        const receipt = receipts.find((r) => r.id === id);
+        if (!receipt) return;
+        receipt.settled = !receipt.settled;
+        await db.updateReceipt(receipt);
+        await renderSessionDetail(app, { sessionId });
+        return;
+      }
       const btn = e.target.closest('button[data-action="delete-receipt"]');
       if (!btn) return;
       const id = btn.dataset.id;

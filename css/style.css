@@ -6,6 +6,8 @@
   --color-primary-light: #e6f6f0;
   --color-danger: #e5484d;
   --color-danger-light: #fdecec;
+  --color-warning: #b45309;
+  --color-warning-light: #fff4e0;
   --color-bg: #f5f7f6;
   --color-surface: #ffffff;
   --color-text: #1a2422;
@@ -286,6 +288,39 @@ input[type='number'] {
 
 .card .btn-icon {
   margin-right: 10px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.card .status-pill {
+  margin-right: 10px;
+}
+
+a.status-pill {
+  cursor: default;
+  text-decoration: none;
+}
+
+.status-pill-paid {
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+}
+
+.status-pill-pending {
+  background: var(--color-warning-light);
+  color: var(--color-warning);
 }
 
 /* Chips (people) */
